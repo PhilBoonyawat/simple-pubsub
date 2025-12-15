@@ -5,6 +5,6 @@
     "typescript": "^5.9.3"
   },
   "scripts": {
-    "ts-node": "ts-node"
+    "start": "ts-node app.ts"
   }
 }
