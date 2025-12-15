@@ -1,77 +1,12 @@
-// interfaces
-interface IEvent {
-  type(): string;
-  machineId(): string;
-}
-
-interface ISubscriber {
-  handle(event: IEvent): void;
-}
-
-interface IPublishSubscribeService {
-  publish (event: IEvent): void;
-  subscribe (type: string, handler: ISubscriber): void;
-  // unsubscribe ( /* Question 2 - build this feature */ );
-}
-
-
-// implementations
-class MachineSaleEvent implements IEvent {
-  constructor(private readonly _sold: number, private readonly _machineId: string) {}
-
-  machineId(): string {
-    return this._machineId;
-  }
-
-  getSoldQuantity(): number {
-    return this._sold
-  }
-
-  type(): string {
-    return 'sale';
-  }
-}
-
-class MachineRefillEvent implements IEvent {
-  constructor(private readonly _refill: number, private readonly _machineId: string) {}
-
-  machineId(): string {
-    throw new Error("Method not implemented.");
-  }
-
-  type(): string {
-    throw new Error("Method not implemented.");
-  }
-}
-
-class MachineSaleSubscriber implements ISubscriber {
-  public machines: Machine[];
-
-  constructor (machines: Machine[]) {
-    this.machines = machines; 
-  }
-
-  handle(event: MachineSaleEvent): void {
-    this.machines[2].stockLevel -= event.getSoldQuantity();
-  }
-}
-
-class MachineRefillSubscriber implements ISubscriber {
-  handle(event: IEvent): void {
-    throw new Error("Method not implemented.");
-  }
-}
-
-
-// objects
-class Machine {
-  public stockLevel = 10;
-  public id: string;
-
-  constructor (id: string) {
-    this.id = id;
-  }
-}
+import { Machine } from "./infrastructure/machines/Machine";
+import { MachineRepository } from "./infrastructure/machines/MachineRepository";
+import { PublishSubscribeService } from "./infrastructure/pubsub/PublishSubsriberService";
+import { MachineSaleSubscriber } from "./subscribers/MachineSaleSubscriber";
+import { MachineRefillSubscriber } from "./subscribers/MachineRefillSubscriber";
+import { StockWarningSubscriber } from "./subscribers/StockWarningSubscriber";
+import { MachineSaleEvent } from "./events/MachineSaleEvent";
+import { MachineRefillEvent } from "./events/MachineRefillEvent"; 
+import { IEvent } from "./events/IEvent";
 
 
 // helpers
@@ -97,20 +32,34 @@ const eventGenerator = (): IEvent => {
 }
 
 
-// program
 (async () => {
   // create 3 machines with a quantity of 10 stock
-  const machines: Machine[] = [ new Machine('001'), new Machine('002'), new Machine('003') ];
+  const machines = [ new Machine('001', 10), new Machine('002', 10), new Machine('003', 10) ];
+  const machineRepository = new MachineRepository(machines);
 
-  // create a machine sale event subscriber. inject the machines (all subscribers should do this)
-  const saleSubscriber = new MachineSaleSubscriber(machines);
+  const pubSubService = new PublishSubscribeService();
 
-  // create the PubSub service
-  const pubSubService: IPublishSubscribeService = null as unknown as IPublishSubscribeService; // implement and fix this
+  // initialize subscribers
+  const saleSubscriber = new MachineSaleSubscriber(machineRepository, pubSubService);
+  const refillSubscriber = new MachineRefillSubscriber(machineRepository, pubSubService);
+  const warningSubscriber = new StockWarningSubscriber(machineRepository);
 
-  // create 5 random events
+  // subscribe to events
+  pubSubService.subscribe('sale', saleSubscriber);
+  pubSubService.subscribe('refill', refillSubscriber);
+  pubSubService.subscribe('low_stock_warning', warningSubscriber);
+  pubSubService.subscribe('stock_level_ok', warningSubscriber);
+
+  console.log('----- Initial stock levels: -----');
+
+  machineRepository.getAllMachines().forEach(machine => {
+    console.log(`Machine ${machine.id}: ${machine.getStockLevel()} units`);
+  });
+
+  console.log('\n--- Processing Events ---\n');
+
   const events = [1,2,3,4,5].map(i => eventGenerator());
 
   // publish the events
-  events.map(pubSubService.publish);
+  events.forEach(e => pubSubService.publish(e));
 })();
