@@ -18,3 +18,9 @@ Additional credit for using useful abstractions that add to the codebase. This i
 (iii) and more
 
 Please share your work using a GitHub repository with @proftom and @Gnoyoyo.
+
+## Application Instructions
+
+`npm install`
+
+`npm run start`
