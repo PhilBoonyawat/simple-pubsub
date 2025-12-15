@@ -22,4 +22,5 @@ Please share your work using a GitHub repository with @proftom and @Gnoyoyo.
 ## Application Instructions
 
 `npm install`
+
 `npm run start`
